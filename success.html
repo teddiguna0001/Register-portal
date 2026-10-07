@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Registered{% endblock %}
+{% block content %}
+<section class="wrap narrow">
+  <div class="card pad center">
+    <div class="alert success">You're registered! Your registration details were saved successfully.</div>
+    <h1>{{ r.event_name }}</h1>
+    <p class="meta">{{ r.event_date|fdate }}, {{ r.start_time|ftime }} to {{ r.end_time|ftime }} · {{ r.location }}</p>
+    <dl class="kv">
+      <dt>Registration ID</dt><dd>{{ reg_code(r) }}</dd><dt>Name</dt><dd>{{ r.name }}</dd>
+      <dt>Email</dt><dd>{{ r.gitam_mail }}</dd><dt>Branch</dt><dd>{{ r.branch }}, {{ r.year }}</dd>
+      <dt>Roll number</dt><dd>{{ r.rollno }}</dd>
+    </dl>
+    <div id="qr" class="qr" data-token="{{ r.qr_token }}" aria-label="Your check-in QR code"></div>
+    <p class="meta">Show this QR code at the event for check-in.</p>
+    <button class="btn" id="dl" data-name="{{ reg_code(r) }}">Download QR code</button>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+new QRCode(document.getElementById("qr"), {text: document.getElementById("qr").dataset.token, width: 220, height: 220});
+document.getElementById("dl").onclick = function () {
+  const c = document.querySelector("#qr canvas"), i = document.querySelector("#qr img");
+  const a = document.createElement("a");
+  a.href = c ? c.toDataURL("image/png") : i.src; a.download = this.dataset.name + "-qr.png"; a.click();
+};
+</script>
+{% endblock %}

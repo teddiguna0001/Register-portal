@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Register{% endblock %}
+{% block content %}
+<section class="wrap narrow">
+{% if event %}
+  {% if event.image %}<img class="cover card" src="{{ url_for('uploads', filename=event.image) }}" alt="{{ event.name }} cover">{% endif %}
+  <form class="card pad form" method="post" novalidate>
+    <h1>Register for {{ event.name }}</h1>
+    <p class="meta">{{ event.event_date|fdate }}, {{ event.start_time|ftime }} to {{ event.end_time|ftime }} · {{ event.location }}</p>
+    {% for e in errors %}<div class="alert error" role="alert">{{ e }}</div>{% endfor %}
+    {% if event.status != 'Live' %}<div class="alert error">Registration Closed</div>
+    {% else %}
+    <label>Full name<input name="name" required value="{{ form.name }}"></label>
+    <label>GITAM email<input type="email" name="gitam_mail" required placeholder="name@student.gitam.edu" value="{{ form.gitam_mail }}"></label>
+    <label>Branch<select name="branch" required><option value="">Select branch</option>{% for b in branches %}<option {{ 'selected' if form.branch == b }}>{{ b }}</option>{% endfor %}</select></label>
+    <label>Year of study<select name="year" required><option value="">Select year</option>{% for y in years %}<option {{ 'selected' if form.year == y }}>{{ y }}</option>{% endfor %}</select></label>
+    <label>Registration / roll number<input name="rollno" required value="{{ form.rollno }}"></label>
+    <button class="btn full">Register</button>{% endif %}
+  </form>
+{% else %}
+  <h1>Registration</h1>
+  {% if not events %}<div class="empty card">No events available yet.</div>{% endif %}
+  {% for e in events %}
+  <div class="card pad row"><div><h3>{{ e.name }}</h3><p class="meta">{{ e.event_date|fdate }} · {{ e.location }}</p></div>
+    {% if e.status == 'Live' %}<a class="btn" href="{{ url_for('register', event_id=e.id) }}">Register</a>{% else %}<span class="badge closed">Registration Closed</span>{% endif %}</div>
+  {% endfor %}
+{% endif %}
+</section>
+{% endblock %}

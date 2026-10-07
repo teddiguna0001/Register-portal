@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block content %}
+<section class="wrap">
+  <div class="row"><h1>Admin dashboard</h1><a class="btn ghost" href="{{ url_for('logout') }}">Logout</a></div>
+  <div class="grid three">
+    <div class="card stat"><b>{{ stats.events }}</b><span>Total events</span></div>
+    <div class="card stat"><b>{{ stats.regs }}</b><span>Total registrations</span></div>
+    <div class="card stat"><b>{{ stats.checked }}</b><span>Checked in</span></div>
+  </div>
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-tab="t-events">Events</button>
+    <button class="tab" data-tab="t-regs">Registrations</button>
+    <button class="tab" data-tab="t-scan">QR check-in</button>
+  </div>
+
+  <div id="t-events" class="panel">
+    <div class="row"><h2>Event management</h2><button class="btn" id="addEvent"><i class="fa-solid fa-plus"></i> Add Event</button></div>
+    {% if not events %}<div class="empty card">No events yet. Add your first event.</div>{% endif %}
+    <div class="scroll"><table class="stack">
+      <thead><tr><th>Event</th><th>When</th><th>Location</th><th>Status</th><th>Actions</th></tr></thead>
+      {% for e in events %}<tr>
+        <td>{{ e.name }}</td><td>{{ e.event_date|fdate }}<br>{{ e.start_time|ftime }} to {{ e.end_time|ftime }}</td><td>{{ e.location }}</td>
+        <td><form method="post" action="{{ url_for('toggle_status', event_id=e.id) }}"><button class="badge {{ e.status|lower }}" title="Click to switch status">{{ e.status }}</button></form></td>
+        <td class="acts">
+          <button class="btn sm ghost edit" data-event='{{ e|tojson }}'>Edit</button>
+          <form method="post" action="{{ url_for('delete_event', event_id=e.id) }}" onsubmit="return confirm('Remove this event and all its registrations?')"><button class="btn sm danger">Remove</button></form>
+        </td></tr>{% endfor %}
+    </table></div>
+  </div>
+
+  <div id="t-regs" class="panel" hidden>
+    <div class="row"><h2>Registrations</h2>
+      <div class="acts"><select id="regFilter" aria-label="Filter by event"><option value="">All events</option>{% for e in events %}<option value="{{ e.id }}">{{ e.name }}</option>{% endfor %}</select>
+      <a class="btn ghost" id="csv" href="{{ url_for('export_csv') }}" data-base="{{ url_for('export_csv') }}"><i class="fa-solid fa-file-csv"></i> Export CSV</a></div></div>
+    {% if not regs %}<div class="empty card">No registrations yet.</div>{% endif %}
+    <div class="scroll"><table class="stack">
+      <thead><tr><th>Event</th><th>Name</th><th>Email</th><th>Branch</th><th>Year</th><th>Roll no.</th><th>Registered</th><th>Check-in</th><th></th></tr></thead>
+      {% for r in regs %}<tr data-event="{{ r.event_id }}">
+        <td>{{ r.event_name }}</td><td>{{ r.name }}</td><td>{{ r.gitam_mail }}</td><td>{{ r.branch }}</td><td>{{ r.year }}</td><td>{{ r.rollno }}</td><td>{{ r.registered_at }}</td>
+        <td><span class="badge {{ 'live' if r.checked_in else 'closed' }}">{{ 'Checked in' if r.checked_in else 'Not yet' }}</span></td>
+        <td><button class="btn sm ghost mail" data-to="{{ r.gitam_mail }}" data-event="{{ r.event_name }}">Email</button></td></tr>{% endfor %}
+    </table></div>
+  </div>
+
+  <div id="t-scan" class="panel" hidden>
+    <h2>QR check-in</h2>
+    <div class="grid two">
+      <div class="card pad"><h3>Scan QR code</h3>
+        <div id="reader"></div>
+        <button class="btn" id="scanToggle">Start camera</button>
+        <p class="meta">Camera access needs permission and HTTPS (localhost is allowed).</p></div>
+      <form class="card pad form" id="manual"><h3>Manual check-in</h3>
+        <label>Event<select id="mEvent" required><option value="">Select event</option>{% for e in events %}<option value="{{ e.id }}">{{ e.name }}</option>{% endfor %}</select></label>
+        <label>Registration / roll number<input id="mRoll" required autocomplete="off" placeholder="Type to search roll numbers"></label>
+        <ul id="sugg" class="sugg" hidden></ul>
+        <button class="btn">Check in</button></form>
+    </div>
+    <div id="result" class="alert" hidden role="status"></div>
+  </div>
+</section>
+
+<dialog id="eventDlg"><form method="post" action="{{ url_for('save_event') }}" enctype="multipart/form-data" class="form">
+  <h2 id="dlgTitle">Add event</h2><input type="hidden" name="id">
+  <label>Event name<input name="name" required></label>
+  <label>Event image (png, jpg, jpeg, gif, webp)<input type="file" name="image" accept=".png,.jpg,.jpeg,.gif,.webp"></label>
+  <label>Date<input type="date" name="event_date" required></label>
+  <div class="two-col"><label>Starts<input type="time" name="start_time" required></label><label>Ends<input type="time" name="end_time" required></label></div>
+  <label>Location<input name="location" required></label>
+  <label>Description<textarea name="description" rows="3"></textarea></label>
+  <label>Document (optional: pdf, doc, docx, ppt, pptx)<input type="file" name="document" accept=".pdf,.doc,.docx,.ppt,.pptx"></label>
+  <label>Status<select name="status"><option>Live</option><option>Closed</option></select></label>
+  <p class="meta" id="keepNote" hidden>Leave files empty to keep the current ones.</p>
+  <div class="acts"><button class="btn">Save event</button><button type="button" class="btn ghost" data-close>Cancel</button></div>
+</form></dialog>
+
+<dialog id="mailDlg"><form class="form" id="mailForm">
+  <h2>Email attendee</h2>
+  <label>To<input id="mTo" type="email" required readonly></label>
+  <label>Event<input id="mEv" readonly></label>
+  <label>Subject<input id="mSub" required></label>
+  <label>Message<textarea id="mBody" rows="5" required></textarea></label>
+  <p class="meta" id="mailNote"></p>
+  <div class="acts"><button class="btn">Send</button><button type="button" class="btn ghost" data-close>Cancel</button></div>
+</form></dialog>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>window.EMAILJS = {{ cfg|tojson }}; window.CONTACT = "gteddi@student.gitam.edu"; window.REGS = {{ reg_list|tojson }};</script>
+<script src="{{ url_for('static', filename='admin.js') }}"></script>
+{% endblock %}

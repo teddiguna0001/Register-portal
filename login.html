@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Admin Login{% endblock %}
+{% block content %}
+<section class="wrap narrow">
+  <form class="card pad form" method="post" novalidate>
+    <h1>Admin login</h1>
+    {% if error %}<div class="alert error" role="alert">{{ error }}</div>{% endif %}
+    <label>GITAM email<input type="email" name="username" required placeholder="Username" value="{{ request.form.username }}" autocomplete="username"></label>
+    <label>Password<input type="password" name="password" required autocomplete="current-password"></label>
+    <button class="btn full">Log in</button>
+  </form>
+</section>
+{% endblock %}

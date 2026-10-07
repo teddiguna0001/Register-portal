@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>Discover. Register. Experience.</h1>
+  <p>Find workshops, talks and hack nights run by GITAM student communities, register in under a minute and check in with a QR code.</p>
+  <a class="btn" href="#registration">Register Now</a>
+</section>
+<section class="wrap narrow-list" id="registration">
+  <h2>Registration</h2>
+  <p class="lead">Pick an event and register with your GITAM email.</p>
+  {% if not events %}<div class="empty card">No events open yet. Check back soon.</div>{% endif %}
+  {% for e in events %}
+  <div class="card pad row"><div><h3>{{ e.name }}</h3><p class="meta">{{ e.event_date|fdate }} · {{ e.start_time|ftime }} to {{ e.end_time|ftime }} · {{ e.location }}</p></div>
+    {% if e.status == 'Live' %}<a class="btn" href="{{ url_for('register', event_id=e.id) }}">Register</a>{% else %}<span class="badge closed">Registration Closed</span>{% endif %}</div>
+  {% endfor %}
+</section>
+<section class="wrap" id="about">
+  <h2>About</h2>
+  <p class="lead">The GITHUB Event Registration Portal helps GITAM student communities publish events, collect registrations and track attendance in one place. Edit these four domains in <code>templates/index.html</code>.</p>
+  <div class="grid four">
+    <div class="card pad"><h3><i class="fa-solid fa-brain"></i> AI and Machine Learning</h3><p>Workshops, AI applications, machine learning, generative AI, computer vision and data science.</p></div>
+    <div class="card pad"><h3><i class="fa-solid fa-code"></i> Web Development</h3><p>Frontend, backend, HTML, CSS, JavaScript, React, APIs and modern web technologies.</p></div>
+    <div class="card pad"><h3><i class="fa-solid fa-cloud"></i> Cloud and DevOps</h3><p>Cloud platforms, Git, CI/CD, deployment and developer tools.</p></div>
+    <div class="card pad"><h3><i class="fa-solid fa-shield-halved"></i> Cyber Security</h3><p>Security awareness, ethical hacking concepts, secure coding and application security.</p></div>
+  </div>
+</section>
+{% endblock %}
