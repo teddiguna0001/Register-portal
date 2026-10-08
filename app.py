@@ -468,7 +468,7 @@ def checkin():
                 event_id=row["event_id"])
     if row["checked_in"]:
         return jsonify(status="already", message="Already checked in.", **info)
-    db().execute("UPDATE registrations SET checked_in=1 WHERE id=?", (row["id"],))
+    db().execute("UPDATE registrations SET checked_in=TRUE WHERE id=?", (row["id"],))
     db().commit()
     return jsonify(status="ok", message="Check-in successful.", **info)
 

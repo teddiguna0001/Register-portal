@@ -57,24 +57,53 @@ function show(d) {
   result.textContent = d.name ? `${d.message} ${d.name} (${d.rollno}) · ${d.event}` : d.message;
 }
 async function checkin(payload) {
+  let r;
   try {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-    const r = await fetch("/admin/api/checkin", {method: "POST", headers: {"Content-Type": "application/json", "X-CSRFToken": csrfToken}, body: JSON.stringify(payload)});
-    show(await r.json());
-  } catch { show({status: "error", message: "Network error. Try again."}); }
+    r = await fetch("/admin/api/checkin", {method: "POST", headers: {"Content-Type": "application/json", "X-CSRFToken": csrfToken}, body: JSON.stringify(payload)});
+  } catch {
+    show({status: "error", message: "Network error. Check your connection and try again."});
+    return false;
+  }
+  try {
+    const data = await r.json();
+    show(data);
+    return r.ok && (data.status === "ok" || data.status === "already");
+  } catch {
+    show({status: "error", message: `The server returned an unexpected response (${r.status}). Try again.`});
+    return false;
+  }
 }
 let scanner = null, busy = false;
 $("#scanToggle").onclick = async function () {
-  if (scanner) { await scanner.stop().catch(() => {}); scanner = null; this.textContent = "Start camera"; return; }
-  scanner = new Html5Qrcode("reader");
+  if (scanner) {
+    await scanner.stop();
+    scanner.clear();
+    scanner = null;
+    this.textContent = "Start camera";
+    return;
+  }
+  if (typeof Html5Qrcode === "undefined") {
+    show({status: "error", message: "The QR scanner library did not load. Refresh the page or use manual check-in."});
+    return;
+  }
   try {
-    await scanner.start({facingMode: "environment"}, {fps: 10, qrbox: w => { const m = Math.floor(Math.min(w.width, w.height) * 0.8); return {width: m, height: m}; }}, async text => {
+    const camera = new Html5Qrcode("reader");
+    await camera.start({facingMode: "environment"}, {fps: 10, qrbox: w => { const m = Math.floor(Math.min(w.width, w.height) * 0.8); return {width: m, height: m}; }}, async text => {
       if (busy) return; busy = true; await checkin({token: text}); setTimeout(() => busy = false, 2500);
     });
+    scanner = camera;
     this.textContent = "Stop camera";
-  } catch { scanner = null; show({status: "error", message: "Could not open the camera. Allow camera access or use manual check-in."}); }
+  } catch (error) {
+    show({status: "error", message: `Could not open the camera. Check camera permission and use HTTPS. ${error.message || ""}`.trim()});
+  }
 };
-$("#manual").onsubmit = e => { e.preventDefault(); checkin({rollno: $("#mRoll").value, event_id: $("#mEvent").value}); $("#mRoll").value = ""; sugg.hidden = true; };
+$("#manual").onsubmit = async e => {
+  e.preventDefault();
+  const success = await checkin({rollno: $("#mRoll").value, event_id: $("#mEvent").value});
+  if (success) $("#mRoll").value = "";
+  sugg.hidden = true;
+};
 
 // Email: EmailJS when configured, else mailto fallback
 const mdlg = $("#mailDlg"), cfg = window.EMAILJS || {};
