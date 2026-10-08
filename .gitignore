@@ -3,6 +3,5 @@ portal.db
 uploads/*
 !uploads/.gitkeep
 venv/
-__pycache__/
-
 .venv/
+__pycache__/

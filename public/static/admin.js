@@ -58,7 +58,8 @@ function show(d) {
 }
 async function checkin(payload) {
   try {
-    const r = await fetch("/admin/api/checkin", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)});
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    const r = await fetch("/admin/api/checkin", {method: "POST", headers: {"Content-Type": "application/json", "X-CSRFToken": csrfToken}, body: JSON.stringify(payload)});
     show(await r.json());
   } catch { show({status: "error", message: "Network error. Try again."}); }
 }

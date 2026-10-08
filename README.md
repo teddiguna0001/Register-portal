@@ -33,6 +33,11 @@ Without configuration the Email button opens your mail app via `mailto:`. For Em
 3. Copy your **Public Key** from Account > General.
 4. Put `EMAILJS_SERVICE_ID`, `EMAILJS_TEMPLATE_ID`, `EMAILJS_PUBLIC_KEY` in `.env`, then restart. These three values are designed to be public; never put a private key in the frontend. Bulk email is not included (it needs a confirmation step and rate-limit handling).
 
-## Deploy
-Use a host with a persistent disk (Render, Railway, PythonAnywhere, a VPS) and run `gunicorn app:app`.
-Before going live: serve over HTTPS; put `ADMIN_USER`, `ADMIN_PASSWORD_HASH` and `SECRET_KEY` (from `setup_env.py`) in your host's secret/environment settings and set `COOKIE_SECURE=1` once HTTPS is on; add CSRF protection (e.g. Flask-WTF); keep `portal.db` and `uploads/` on persistent storage with regular backups; debug mode is already off unless `FLASK_DEBUG=1`; consider scanning uploads and serving them from object storage.
+## Deploy to Vercel
+The app uses SQLite and the local `uploads/` directory for development. Vercel Functions have ephemeral filesystems, so production requires hosted PostgreSQL and Vercel Blob:
+1. Import this repository into Vercel and connect a Neon PostgreSQL integration and a public Vercel Blob store to the project.
+2. Add `ADMIN_USER`, `ADMIN_PASSWORD_HASH`, and `SECRET_KEY` as Vercel environment variables. Generate the password hash and secret locally with `python setup_env.py`; copy the resulting values from `.env` into Vercel without committing `.env`.
+3. Ensure the database integration provides `DATABASE_URL` and the connected Blob store provides `BLOB_STORE_ID` and Vercel OIDC credentials. Redeploy after connecting storage.
+4. Vercel serves CSS/JavaScript from `public/static/`. Event uploads are stored in Blob; form uploads are limited to 4 MB to fit the function request limit. `COOKIE_SECURE` defaults to enabled on Vercel.
+
+The database schema is initialized automatically when the app starts, but existing local `portal.db` data and files are not migrated. Make backups and migrate them separately if needed. Keep all production secrets in Vercel's environment settings, never in Git.

@@ -3,8 +3,9 @@
 {% block content %}
 <section class="wrap narrow">
 {% if event %}
-  {% if event.image %}<img class="cover card" src="{{ url_for('uploads', filename=event.image) }}" alt="{{ event.name }} cover">{% endif %}
+  {% if event.image %}<img class="cover card" src="{{ upload_url(event.image) }}" alt="{{ event.name }} cover">{% endif %}
   <form class="card pad form" method="post" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <h1>Register for {{ event.name }}</h1>
     <p class="meta">{{ event.event_date|fdate }}, {{ event.start_time|ftime }} to {{ event.end_time|ftime }} · {{ event.location }}</p>
     {% for e in errors %}<div class="alert error" role="alert">{{ e }}</div>{% endfor %}
