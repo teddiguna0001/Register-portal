@@ -33,12 +33,17 @@ YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"]
 ADMIN_USER = os.environ.get("ADMIN_USER", "").strip().lower()
 ADMIN_HASH = os.environ.get("ADMIN_PASSWORD_HASH", "")
 SECRET_KEY = os.environ.get("SECRET_KEY", "")
-if not (ADMIN_USER and ADMIN_HASH and SECRET_KEY):
+if not IS_VERCEL and not (ADMIN_USER and ADMIN_HASH and SECRET_KEY):
     raise SystemExit("Missing .env settings. Run: python setup_env.py")
-if IS_VERCEL and not DATABASE_URL:
-    raise SystemExit("DATABASE_URL is required on Vercel. Connect a PostgreSQL database.")
-if IS_VERCEL and not BLOB_CONFIGURED:
-    raise SystemExit("Connect a Vercel Blob store before deploying this application.")
+MISSING_VERCEL_SETTINGS = [
+    name for name, configured in (
+        ("ADMIN_USER", bool(ADMIN_USER)),
+        ("ADMIN_PASSWORD_HASH", bool(ADMIN_HASH)),
+        ("SECRET_KEY", bool(SECRET_KEY)),
+        ("DATABASE_URL", bool(DATABASE_URL)),
+        ("Vercel Blob store", BLOB_CONFIGURED),
+    ) if IS_VERCEL and not configured
+]
 FAILS = {}  # ip -> recent failed login times (simple brute-force throttle)
 MAX_FAILS, LOCK_SECONDS = 5, 900
 
@@ -51,6 +56,12 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
     DB_PATH=DB_PATH,
 )
+if MISSING_VERCEL_SETTINGS:
+    @app.before_request
+    def require_vercel_settings():
+        missing = ", ".join(MISSING_VERCEL_SETTINGS)
+        return Response(f"Deployment configuration is incomplete: {missing}.", status=503)
+
 CSRFProtect(app)
 if not IS_VERCEL:
     os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -473,6 +484,7 @@ def not_found(_):
     return render_template("base.html", not_found=True), 404
 
 
-init_db()
+if not IS_VERCEL or DATABASE_URL:
+    init_db()
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=os.environ.get("FLASK_DEBUG") == "1")
